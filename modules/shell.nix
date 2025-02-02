@@ -1,45 +1,71 @@
 { config, pkgs, ... }:
 {
-  programs.zsh = {
-    enable = true;
-    autosuggestion.enable = true; # Corrected option for Zsh autosuggestions
-    syntaxHighlighting.enable = true; # Enable Zsh syntax highlighting
-  oh-my-zsh = {
+  imports = [ ];
+  
+  options = { };
+  
+  config = {
+    programs.zsh = {
       enable = true;
-      plugins = [
-        "git"
-        "npm"
-        "history"
-        "node"
-        "rust"
-        "deno"
-        "sudo"
-        "docker"
-      ];
+      autosuggestion.enable = true;
+      syntaxHighlighting.enable = true;
+      oh-my-zsh = {
+        enable = true;
+        plugins = [
+          "git"
+          "npm"
+          "history"
+          "node"
+          "rust"
+          "deno"
+          "sudo"
+          "docker"
+          "tmux"
+        ];
+      };
+      initExtra = ''
+        source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
+        # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh
+        [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+        
+        # Auto-start tmux
+        if [ -z "$TMUX" ]; then
+          exec tmux new-session -A -s main
+        fi
+      '';
     };
-    initExtra = ''
-      source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
-      # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh
-      [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-    '';
-  };
 
-  home.packages = with pkgs; [
-    zsh-powerlevel10k
-  ];
+    programs.tmux = {
+      enable = true;
+      clock24 = true;
+      keyMode = "vi";
+      terminal = "screen-256color";
+      baseIndex = 1;
+      customPaneNavigationAndResize = true;
+      historyLimit = 10000;
+      extraConfig = ''
+        # Enable mouse support
+        set -g mouse on
+        
+        # Set prefix to Ctrl-a
+        set -g prefix C-a
+        unbind C-b
+        bind C-a send-prefix
+        
+        # Improve colors
+        set -g default-terminal "screen-256color"
+        
+        # Set window split keys
+        bind-key v split-window -h
+        bind-key h split-window -v
+      '';
+    };
 
-  programs.bash.enable = false;
-  # Add these lines to set zsh as default shell
-  home.shellAliases = {
-    # Your aliases here if needed
+    home.packages = with pkgs; [
+      zsh-powerlevel10k
+      tmux
+    ];
+    
+    programs.bash.enable = false;
   };
-  
-  # This tells home-manager to manage your shell
-  home.stateVersion = "24.11"; # Change this to your nixos version
-  
-  # Set default shell
-  home.username = "nixos"; # Replace with your username
-  home.homeDirectory = "/home/nixos"; # Replace with your home directory
-  targets.genericLinux.enable = true;
-  # The important line that sets zsh as default shell:
 }
