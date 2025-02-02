@@ -47,17 +47,33 @@
         # Enable mouse support
         set -g mouse on
         
-        # Set prefix to Ctrl-a
-        set -g prefix C-a
+         # Change prefix from Ctrl+b to Ctrl+a
         unbind C-b
-        bind C-a send-prefix
-        
+        set-option -g prefix C-a
+        bind-key C-a send-prefix
+
+        # Split windows with shortcuts
+        bind-key [ split-window -h  # Ctrl+a + [ for horizontal split
+        bind-key ] split-window -v  # Ctrl+a + ] for vertical split
+
+        # Resize panes with Ctrl + Arrow keys (by 3 cells)
+        bind-key -n C-Left resize-pane -L 3
+        bind-key -n C-Right resize-pane -R 3
+        bind-key -n C-Up resize-pane -U 3
+        bind-key -n C-Down resize-pane -D 3
+
+        # Navigate panes with Ctrl + h/j/k/l
+        bind-key -n C-h select-pane -L
+        bind-key -n C-l select-pane -R
+        bind-key -n C-k select-pane -U
+        bind-key -n C-j select-pane -D
+
+        # Reload tmux config with Ctrl+a + r
+        bind r source-file ~/.tmux.conf \; display-message "Config reloaded!"
+
         # Improve colors
         set -g default-terminal "screen-256color"
         
-        # Set window split keys
-        bind-key v split-window -h
-        bind-key h split-window -v
       '';
     };
 
