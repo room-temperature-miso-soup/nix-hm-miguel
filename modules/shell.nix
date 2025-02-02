@@ -6,7 +6,6 @@
     syntaxHighlighting.enable = true; # Enable Zsh syntax highlighting
   oh-my-zsh = {
       enable = true;
-      theme = "powerlevel10k/powerlevel10k";
       plugins = [
         "git"
         "npm"
