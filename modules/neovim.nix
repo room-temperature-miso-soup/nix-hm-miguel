@@ -22,7 +22,7 @@
       nvim-lspconfig
       fidget-nvim
       nvim-notify
-      coc-nvim
+      blink-cmp
       
       # Treesitter
       nvim-treesitter.withAllGrammars
@@ -41,33 +41,43 @@
       gitsigns-nvim
       which-key-nvim
       nvim-web-devicons
+      mini-icons
 
       # Editor Features
       nvim-autopairs
       comment-nvim
+
+      # Zig Support
+      zig-vim
     ];
 
     extraPackages = with pkgs; [
       # Language servers
       gopls
       pyright
+      zls
       
       # Tools
       ripgrep
       fd
+      zig
       
-      # Node for coc
-      nodejs
-
       # Tree-sitter CLI
       tree-sitter
 
       # Compiler
       gcc
 
+      #Python Tools
+      poetry
+      pyenv
+
+
+
+
       # Clipboard tool (choose one based on your environment)
       xclip # For X11
-      wl-clipboard # For Wayland
+     # wl-clipboard # For Wayland
     ];
 
     extraLuaConfig = ''
@@ -85,7 +95,7 @@
       -- Theme setup
       vim.cmd[[colorscheme tokyonight]]
        
-     -- Set leader key
+      -- Set leader key
       vim.g.mapleader = " "
       vim.g.maplocalleader = " "
       
@@ -120,65 +130,94 @@
       require("fidget").setup{} -- LSP progress
       vim.notify = require("notify") -- Better notifications
 
-      -- COC Configuration
-      vim.g.coc_global_extensions = {
-        'coc-pyright',
-        'coc-go',
-        'coc-snippets'
+      -- mini.icons setup
+      require('mini.icons').setup()
+
+      -- LSP setup
+      local lspconfig = require('lspconfig')
+      
+      -- Zig LSP setup
+      lspconfig.zls.setup{
+        capabilities = require('cmp_nvim_lsp').default_capabilities(),
+        on_attach = function(client, bufnr)
+          -- Enable completion triggered by <c-x><c-o>
+          vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+
+          -- LSP Keybindings
+          local bufopts = { noremap=true, silent=true, buffer=bufnr }
+          vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
+          vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
+          vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
+          vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
+          vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, bufopts)
+          vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
+          vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, bufopts)
+          vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
+        end,
       }
 
-      -- COC Keymaps
-      vim.keymap.set('n', '[g', '<Plug>(coc-diagnostic-prev)', { silent = true })
-      vim.keymap.set('n', ']g', '<Plug>(coc-diagnostic-next)', { silent = true })
-      vim.keymap.set('n', 'gd', '<Plug>(coc-definition)', { silent = true })
-      vim.keymap.set('n', 'gy', '<Plug>(coc-type-definition)', { silent = true })
-      vim.keymap.set('n', 'gi', '<Plug>(coc-implementation)', { silent = true })
-      vim.keymap.set('n', 'gr', '<Plug>(coc-references)', { silent = true })
+      -- Completion setup with nvim-cmp and blink.cmp
+      local cmp = require('cmp')
+      local luasnip = require('luasnip')
+      local blink = require('blink.cmp')
 
-      -- Use K to show documentation in preview window
-      function _G.show_docs()
-        local cw = vim.fn.expand('<cword>')
-        if vim.fn.index({'vim', 'help'}, vim.bo.filetype) >= 0 then
-          vim.api.nvim_command('h ' .. cw)
-        elseif vim.api.nvim_eval('coc#rpc#ready()') then
-          vim.fn.CocActionAsync('doHover')
-        else
-          vim.api.nvim_command('!' .. vim.o.keywordprg .. ' ' .. cw)
-        end
-      end
-      vim.keymap.set('n', 'K', '<CMD>lua _G.show_docs()<CR>', { silent = true })
+      -- Initialize blink.cmp
+      blink.setup({})
 
-      -- Completion setup with COC
-      vim.keymap.set('i', '<TAB>', 'pumvisible() ? coc#_select_confirm() : "<TAB>"', { expr = true })
-      vim.keymap.set('i', '<cr>', 'pumvisible() ? coc#_select_confirm() : "<cr>"', { expr = true })
-
-      -- Setup other plugins
-      require('Comment').setup({
-        toggler = {
-          line = '<leader>cc', -- Toggle line comment
-          block = '<leader>cb', -- Toggle block comment
+      cmp.setup({
+        snippet = {
+          expand = function(args)
+            luasnip.lsp_expand(args.body)
+          end,
         },
-        opleader = {
-          line = '<leader>c', -- Line comment operator
-          block = '<leader>b', -- Block comment operator
+        mapping = {
+          ['<C-p>'] = cmp.mapping.select_prev_item(),
+          ['<C-n>'] = cmp.mapping.select_next_item(),
+          ['<C-d>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-f>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete(),
+          ['<C-e>'] = cmp.mapping.close(),
+          ['<CR>'] = cmp.mapping.confirm {
+            behavior = cmp.ConfirmBehavior.Replace,
+            select = true,
+          },
+          ['<Tab>'] = function(fallback)
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then
+              luasnip.expand_or_jump()
+            else
+              fallback()
+            end
+          end,
+          ['<S-Tab>'] = function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
+          end,
+        },
+        sources = {
+          { name = 'nvim_lsp' },
+          { name = 'luasnip' },
+          { name = 'buffer' },
+          { name = 'path' },
+          { name = 'blink' },
         },
       })
+
+      -- Setup other plugins
+      require('Comment').setup()
       require('nvim-autopairs').setup()
       require('gitsigns').setup()
       require('which-key').setup()     
-     
-       -- Basic settings
-      vim.opt.number = true
-      vim.opt.relativenumber = true
-      vim.opt.mouse = 'a'
-      vim.opt.termguicolors = true
-
+      
       -- Terminal configuration
       require('toggleterm').setup({
-        -- Direction can be: vertical | horizontal | tab | float
         direction = 'float',
-        
-        -- Float configuration
         float_opts = {
           border = 'curved',
           width = function()
@@ -189,24 +228,16 @@
           end,
           winblend = 3,
         },
-        
-        -- Shell configuration
         shell = vim.o.shell,
-        
-        -- Terminal window mappings
         close_on_exit = true,
         insert_mappings = true,
         terminal_mappings = true,
-        
-        -- Shade the terminal
         shade_terminals = true,
         shading_factor = 2,
-        
-        -- Set starting insert mode
         start_in_insert = true,
       })
 
-      -- Key mappings for terminal
+      -- Terminal keymaps
       function _G.set_terminal_keymaps()
         local opts = {buffer = 0}
         vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)
@@ -216,13 +247,11 @@
         vim.keymap.set('t', '<C-l>', [[<Cmd>wincmd l<CR>]], opts)
       end
 
-      -- Auto command to set terminal keymaps when terminal opens
       vim.cmd('autocmd! TermOpen term://* lua set_terminal_keymaps()')
 
       -- Global terminal toggle mapping
       vim.keymap.set('n', '<leader>tf', '<cmd>ToggleTerm direction=float<cr>', 
         {noremap = true, silent = true})
-
-      '';
+    '';
   };
 }

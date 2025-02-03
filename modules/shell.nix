@@ -46,7 +46,13 @@
       extraConfig = ''
         # Enable mouse support
         set -g mouse on
-        
+
+        # Set escape-time to 300ms (or lower)
+        set-option -sg escape-time 10
+
+        # Enable focus events
+        set -g focus-events on
+
          # Change prefix from Ctrl+b to Ctrl+a
         unbind C-b
         set-option -g prefix C-a
@@ -71,8 +77,6 @@
         # Reload tmux config with Ctrl+a + r
         bind r source-file ~/.tmux.conf \; display-message "Config reloaded!"
 
-        # Improve colors
-        set -g default-terminal "screen-256color"
         
       '';
     };

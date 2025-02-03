@@ -16,6 +16,10 @@
     gopls
     delve
     golangci-lint
+
+    # Zig development
+    zig
+    zls
   ];
 
   # Set up Python environment
@@ -23,3 +27,4 @@
     PYTHONPATH = "~/.local/lib/python3.11/site-packages:$PYTHONPATH";
   };
 }
+
